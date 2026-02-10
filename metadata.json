@@ -1,0 +1,7 @@
+{
+  "name": "Vantez Terminal Pro",
+  "description": "A high-performance financial intelligence terminal with AI-powered analysis, portfolio management, and quantitative simulators.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
