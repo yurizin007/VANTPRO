@@ -127,7 +127,7 @@ export class GeminiService {
 
   async getNewsFeed() {
     if (!process.env.API_KEY) return [];
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY || "teste_123" });
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
