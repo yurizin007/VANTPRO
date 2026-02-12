@@ -1,9 +1,14 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { GroundingChunk, Asset } from '../types';
 import { FinancialEngine } from '../utils/math';
 import { gerarDadosMockDeterministico } from '../data/acoesB3';
 
 export class GeminiService {
+  private getClient() {
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+
   private cleanJsonResponse(text: string): any {
     try {
       if (!text) return null;
@@ -19,37 +24,14 @@ export class GeminiService {
     }
   }
 
-  private async buscarDeBrapi(ticker: string): Promise<any> {
-    try {
-      const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=demo`);
-      if (!response.ok) return null;
-      const data = await response.json();
-      const result = data.results[0];
-      if (!result) return null;
-      return {
-        price: result.regularMarketPrice,
-        name: result.longName,
-        change: result.regularMarketChangePercent,
-        source: 'brapi.dev'
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
   async discoverAndSyncAsset(ticker: string): Promise<Partial<Asset>> {
+    const ai = this.getClient();
     const formattedTicker = ticker.includes('.SA') ? ticker : `${ticker}.SA`;
-    
-    if (!process.env.API_KEY || process.env.API_KEY === 'YOUR_KEY_HERE') {
-      return FinancialEngine.analyze(gerarDadosMockDeterministico(ticker) as Asset);
-    }
-
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
-        contents: `Analise técnica e preço atual para ${formattedTicker} da B3. Retorne em JSON.`,
+        contents: `Analise técnica profunda e preço em tempo real para o ticker ${formattedTicker} da B3. Forneça dados fundamentalistas atuais.`,
         config: {
           tools: [{ googleSearch: {} }],
           responseMimeType: "application/json",
@@ -65,7 +47,7 @@ export class GeminiService {
             },
             required: ["price", "name"]
           },
-          systemInstruction: "Você é um terminal financeiro de elite. Forneça dados precisos da B3 via busca.",
+          systemInstruction: "Você é um terminal financeiro de elite. Use a busca para extrair dados precisos da B3/CVM.",
         },
       });
 
@@ -85,74 +67,75 @@ export class GeminiService {
         } as Asset);
       }
     } catch (e) {
-      console.debug("IA Discover Fail, fallback to APIs/Mock");
-    }
-
-    const brapiData = await this.buscarDeBrapi(ticker);
-    if (brapiData) {
-      return FinancialEngine.analyze({
-        ticker,
-        nome: brapiData.name,
-        currentPrice: brapiData.price,
-        change: brapiData.change,
-        type: ticker.length <= 5 ? 'Ação' : 'FII',
-        quantity: 0, averagePrice: 0,
-        tags: ["#B3_Direct"]
-      } as Asset);
+      console.warn("IA Discovery Fail, using fallback logic.");
     }
 
     return FinancialEngine.analyze(gerarDadosMockDeterministico(ticker) as Asset);
   }
 
   async analyzeMarket(query: string, context?: string) {
-    if (!process.env.API_KEY) return { text: "Modo Offline.", sources: [] };
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = this.getClient();
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
-        contents: `Contexto: ${context}\n\nAnalise: ${query}`,
+        contents: `Contexto da Carteira: ${context}\n\nConsulta: ${query}`,
         config: {
           tools: [{ googleSearch: {} }],
-          systemInstruction: "Analista Financeiro Vantez. Use busca para notícias e dados atuais B3/CVM."
+          systemInstruction: "Analista Financeiro Vantez. Forneça insights baseados em dados reais de mercado via busca."
         },
       });
       return {
-        text: response.text || "Sem resposta.",
+        text: response.text || "Sem resposta da IA no momento.",
         sources: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as GroundingChunk[]) || []
       };
     } catch (error) {
-      return { text: "IA indisponível.", sources: [] };
+      return { text: "Sistema de IA momentaneamente indisponível.", sources: [] };
     }
   }
 
   async getNewsFeed() {
-    if (!process.env.API_KEY) return [];
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = this.getClient();
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: "Liste 5 notícias financeiras críticas do Brasil hoje. JSON com id, tag, time, title, source, content.",
-        config: { tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
+        contents: "Liste as 5 notícias financeiras mais impactantes do Brasil hoje.",
+        config: { 
+          tools: [{ googleSearch: {} }], 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.INTEGER },
+                tag: { type: Type.STRING },
+                time: { type: Type.STRING },
+                title: { type: Type.STRING },
+                source: { type: Type.STRING },
+                content: { type: Type.STRING }
+              },
+              required: ["title", "content"]
+            }
+          }
+        }
       });
-      const data = this.cleanJsonResponse(response.text);
-      return Array.isArray(data) ? data : (data?.noticias || []);
+      return this.cleanJsonResponse(response.text) || [];
     } catch (e) {
       return [];
     }
   }
 
   async generateReportContent(topic: string, summary: string): Promise<string> {
-    if (!process.env.API_KEY) return "Indisponível.";
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = this.getClient();
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Gere um relatório profissional sobre ${topic}. Sumário de dados: ${summary}.`,
-        config: { systemInstruction: "Especialista em Research Financeiro." }
+        model: 'gemini-3-pro-preview',
+        contents: `Gere um relatório de research profissional sobre: ${topic}. Dados consolidados: ${summary}.`,
+        config: { systemInstruction: "Especialista em Research de Investimentos B3." }
       });
-      return response.text || "Conteúdo não gerado.";
+      return response.text || "Conteúdo não pôde ser gerado.";
     } catch (error) {
-      return "Falha na geração.";
+      return "Falha na geração de relatório.";
     }
   }
 }

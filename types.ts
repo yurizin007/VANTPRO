@@ -1,9 +1,11 @@
 
+export type AssetType = 'Ação' | 'FII' | 'Cripto' | 'Tesouro' | 'Offshore' | 'Previdência';
+
 export interface Asset {
   ticker: string;
   name?: string;
-  nome?: string; 
-  type: string;
+  nome?: string; // Mantido para compatibilidade
+  type: AssetType | string;
   quantity: number;
   averagePrice: number;
   currentPrice: number;
@@ -64,14 +66,15 @@ export interface UserProfile {
   xp: number;
 }
 
+// Added QuizResult interface to fix the import error in QuizPage.tsx
+export interface QuizResult {
+  profile: UserProfile;
+}
+
 export type PageId = 
   | 'dashboard' | 'myplan' | 'wallet' | 'stocks' | 'crypto' | 'funds' 
   | 'tesouro' | 'offshore' | 'previdencia' | 'advisor' 
   | 'robo' | 'coe' | 'news' | 'health' | 'academy' | 'tax' | 'quiz';
-
-export interface QuizResult {
-  profile: UserProfile;
-}
 
 export interface NewsItem {
   id: number;
