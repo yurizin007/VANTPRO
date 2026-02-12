@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { todasAcoesB3 } from '../data/acoes-b3';
+import { Asset } from '../types';
 import './AcoesScanner.css';
 
 const SETORES_CONHECIDOS: Record<string, string> = {
@@ -9,16 +11,22 @@ const SETORES_CONHECIDOS: Record<string, string> = {
   MXRF11: 'FII Papel', HGLG11: 'FII Tijolo', KNRI11: 'FII Misto'
 };
 
-const AcoesScanner: React.FC = () => {
+interface AcoesScannerProps {
+  assets?: Asset[];
+  onAddAsset?: (asset: Asset) => void;
+}
+
+const AcoesScanner: React.FC<AcoesScannerProps> = ({ assets = [], onAddAsset }) => {
   const [acoes, setAcoes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagina, setPagina] = useState(1);
   const [busca, setBusca] = useState('');
-  const [monitorados, setMonitorados] = useState<string[]>([]);
   const [stockToScan, setStockToScan] = useState<any | null>(null);
   const [scanning, setScanning] = useState(false);
 
   const ACOES_POR_PAGINA = 12;
+
+  const isInWallet = (ticker: string) => assets.some(a => a.ticker === ticker);
 
   // GERADOR DE PERFIL DA EMPRESA (Texto Inteligente)
   const getCompanyProfile = (ticker: string, setor: string, nome: string) => {
@@ -64,7 +72,6 @@ const AcoesScanner: React.FC = () => {
   // GRÁFICO SIMULADO (SVG PURO)
   const GraficoSimulado = ({ positivo }: { positivo: boolean }) => {
     const color = positivo ? "#4ade80" : "#f87171";
-    // Caminho pseudo-aleatório baseado no estado positivo
     const points = positivo 
       ? "0,80 10,75 20,82 30,70 40,75 50,60 60,65 70,50 80,45 90,30 100,20"
       : "0,20 10,35 20,30 30,45 40,40 50,55 60,50 70,75 80,70 90,85 100,90";
@@ -98,11 +105,6 @@ const AcoesScanner: React.FC = () => {
       setStockToScan({ ...acao, ...fundamentos });
       setScanning(false);
     }, 1200);
-  };
-
-  const toggleMonitorar = (ticker: string) => {
-    if (monitorados.includes(ticker)) setMonitorados(monitorados.filter(t => t !== ticker));
-    else setMonitorados([...monitorados, ticker]);
   };
 
   useEffect(() => {
@@ -179,36 +181,58 @@ const AcoesScanner: React.FC = () => {
 
       {loading ? <div className="loading-container"><div className="spinner"></div></div> : (
         <div className="acoes-grid">
-          {acoes.map((acao) => (
-            <div key={acao.ticker} className={`acao-card-kinvo group ${monitorados.includes(acao.ticker) ? 'border-blue-500' : ''}`}>
-              <div className="card-header">
-                <div className="flex items-center gap-3">
-                  {acao.logo ? <img src={acao.logo} alt={acao.ticker} className="w-10 h-10 rounded bg-white p-1 object-contain" /> : <div className="w-10 h-10 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-500">{acao.ticker.substring(0, 2)}</div>}
-                  <div className="text-left">
-                    <div className="ticker-badge uppercase">{acao.ticker}</div>
-                    <div className="nome-empresa truncate w-32" title={acao.nome}>{acao.nome?.substring(0, 15)}</div>
+          {acoes.map((acao) => {
+            const inWallet = isInWallet(acao.ticker);
+            return (
+              <div key={acao.ticker} className={`acao-card-kinvo group ${inWallet ? 'border-emerald-500' : 'border-white/5'}`}>
+                <div className="card-header">
+                  <div className="flex items-center gap-3">
+                    {acao.logo ? <img src={acao.logo} alt={acao.ticker} className="w-10 h-10 rounded bg-white p-1 object-contain" /> : <div className="w-10 h-10 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-500">{acao.ticker.substring(0, 2)}</div>}
+                    <div className="text-left">
+                      <div className="ticker-badge uppercase">{acao.ticker}</div>
+                      <div className="nome-empresa truncate w-32" title={acao.nome}>{acao.nome?.substring(0, 15)}</div>
+                    </div>
+                  </div>
+                  <div className="badge-setor">{acao.setor}</div>
+                </div>
+                <div className="card-price text-left mt-4">
+                  <span className="currency text-emerald-500 font-black text-xs">R$</span>
+                  <span className="value text-2xl font-black text-white font-mono">{acao.preco?.toFixed(2)}</span>
+                </div>
+                <div className="card-footer mt-6">
+                  <div className={`variacao-pill font-black text-[10px] px-2 py-1 rounded-lg ${(acao.variacao || 0) >= 0 ? 'up' : 'down'}`}>
+                    {(acao.variacao || 0) >= 0 ? '▲' : '▼'} {Math.abs(acao.variacao || 0).toFixed(2)}%
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => openScanner(acao)} className="btn-scan">🔍 DETALHES</button>
+                    <button 
+                      onClick={() => {
+                        if (onAddAsset && !inWallet) {
+                          onAddAsset({
+                            ticker: acao.ticker,
+                            nome: acao.nome,
+                            name: acao.nome,
+                            type: acao.ticker.endsWith('11') ? 'FII' : 'Ação',
+                            quantity: 1,
+                            averagePrice: acao.preco,
+                            currentPrice: acao.preco,
+                            setor: acao.setor,
+                            change: acao.variacao,
+                            updatedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                          });
+                        }
+                      }} 
+                      disabled={inWallet}
+                      className={`btn-monitorar ${inWallet ? 'ativo' : ''}`}
+                    >
+                      {inWallet ? '✓' : '+'}
+                    </button>
                   </div>
                 </div>
-                <div className="badge-setor">{acao.setor}</div>
+                <div className={`bottom-glow ${inWallet ? 'bg-emerald-500 opacity-100' : ((acao.variacao || 0) >= 0 ? 'bg-green-500' : 'bg-red-500')}`}></div>
               </div>
-              <div className="card-price text-left mt-4">
-                <span className="currency text-emerald-500 font-black text-xs">R$</span>
-                <span className="value text-2xl font-black text-white font-mono">{acao.preco?.toFixed(2)}</span>
-              </div>
-              <div className="card-footer mt-6">
-                <div className={`variacao-pill font-black text-[10px] px-2 py-1 rounded-lg ${(acao.variacao || 0) >= 0 ? 'up' : 'down'}`}>
-                  {(acao.variacao || 0) >= 0 ? '▲' : '▼'} {Math.abs(acao.variacao || 0).toFixed(2)}%
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => openScanner(acao)} className="btn-scan">🔍 DETALHES</button>
-                  <button onClick={() => toggleMonitorar(acao.ticker)} className={`btn-monitorar ${monitorados.includes(acao.ticker) ? 'ativo' : ''}`}>
-                    {monitorados.includes(acao.ticker) ? '✓' : '+'}
-                  </button>
-                </div>
-              </div>
-              <div className={`bottom-glow ${(acao.variacao || 0) >= 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -218,9 +242,6 @@ const AcoesScanner: React.FC = () => {
         <button onClick={() => setPagina(p => p + 1)} className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-500 hover:text-white transition-all">Próxima</button>
       </div>
 
-      {/* ======================================================== */}
-      {/* O NOVO MODAL GIGANTE (PAINEL DE COMANDO) */}
-      {/* ======================================================== */}
       {(stockToScan || scanning) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={() => !scanning && setStockToScan(null)}>
           <div className="bg-[#111827] w-full max-w-6xl h-[90vh] rounded-[2.5rem] border border-gray-700 shadow-2xl overflow-hidden flex flex-col relative" onClick={e => e.stopPropagation()}>
@@ -233,7 +254,6 @@ const AcoesScanner: React.FC = () => {
               </div>
             ) : (
               <>
-                {/* CABEÇALHO DO MODAL */}
                 <div className="bg-gray-800/50 p-8 border-b border-gray-700 flex flex-col md:flex-row justify-between items-center gap-6 sticky top-0 backdrop-blur-md z-10">
                   <div className="flex items-center gap-6">
                     {stockToScan.logo ? (
@@ -258,11 +278,7 @@ const AcoesScanner: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 md:grid-cols-12 gap-12 custom-scrollbar">
-                  
-                  {/* COLUNA ESQUERDA: PERFIL + GRÁFICO */}
                   <div className="md:col-span-7 space-y-10 text-left">
-                    
-                    {/* GRÁFICO */}
                     <div className="space-y-4">
                       <h3 className="text-white font-black uppercase text-xs tracking-[4px] flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
@@ -271,7 +287,6 @@ const AcoesScanner: React.FC = () => {
                       <GraficoSimulado positivo={stockToScan.variacao >= 0} />
                     </div>
 
-                    {/* SOBRE */}
                     <div className="bg-gray-800/30 p-8 rounded-[2rem] border border-gray-700/50 space-y-6">
                       <h3 className="text-blue-400 font-black uppercase text-xs tracking-[4px]">Perfil Corporativo</h3>
                       <p className="text-gray-300 leading-relaxed text-xl font-medium">
@@ -284,10 +299,7 @@ const AcoesScanner: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* COLUNA DIREITA: INDICADORES E VEREDITO */}
                   <div className="md:col-span-5 space-y-8">
-                    
-                    {/* CAIXA DE VEREDITO GIGANTE */}
                     <div className={`p-8 rounded-[2.5rem] border-2 text-center shadow-2xl transition-all ${stockToScan.acaoSugerida.includes('COMPRA') ? 'border-green-500 bg-green-500/5 shadow-green-500/10' : stockToScan.acaoSugerida.includes('VENDA') ? 'border-red-500 bg-red-500/5 shadow-red-500/10' : 'border-yellow-500 bg-yellow-500/5 shadow-yellow-500/10'}`}>
                       <p className="text-gray-500 text-[10px] font-black uppercase tracking-[5px] mb-4">Recomendação Vantez Kernel</p>
                       <h2 className={`text-5xl font-black tracking-tighter ${stockToScan.corVeredito}`}>{stockToScan.acaoSugerida}</h2>
@@ -296,10 +308,8 @@ const AcoesScanner: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* BARRAS DE MÉTRICAS */}
                     <div className="bg-gray-800/30 p-8 rounded-[2rem] border border-gray-700/50">
                       <h3 className="text-white font-black uppercase text-xs tracking-[4px] mb-10 border-b border-gray-700 pb-4">Audit Fundamentalista</h3>
-                      
                       <BigMetricBar label="Dividend Yield (Anual)" valor={stockToScan.dy} tipo="DY" sufixo="%" />
                       <BigMetricBar label="P/L (Tempo p/ Retorno)" valor={stockToScan.pl} tipo="PL" sufixo=" Anos" />
                       <BigMetricBar label="Dívida / EBITDA (Solvência)" valor={stockToScan.divida} tipo="DIVIDA" sufixo="x" />
@@ -317,10 +327,27 @@ const AcoesScanner: React.FC = () => {
                     </div>
 
                     <button 
-                      onClick={() => { toggleMonitorar(stockToScan.ticker); setStockToScan(null); }}
-                      className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[5px] rounded-2xl text-lg transition-all shadow-2xl shadow-blue-900/30 active:scale-[0.98]"
+                      onClick={() => {
+                        if (onAddAsset && !assets.some(a => a.ticker === stockToScan.ticker)) {
+                          onAddAsset({
+                            ticker: stockToScan.ticker,
+                            nome: stockToScan.nome,
+                            name: stockToScan.nome,
+                            type: stockToScan.ticker.endsWith('11') ? 'FII' : 'Ação',
+                            quantity: 1,
+                            averagePrice: stockToScan.preco,
+                            currentPrice: stockToScan.preco,
+                            setor: stockToScan.setor,
+                            change: stockToScan.variacao,
+                            updatedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                          });
+                        }
+                        setStockToScan(null);
+                      }}
+                      disabled={assets.some(a => a.ticker === stockToScan.ticker)}
+                      className={`w-full py-6 font-black uppercase tracking-[5px] rounded-2xl text-lg transition-all shadow-2xl active:scale-[0.98] ${assets.some(a => a.ticker === stockToScan.ticker) ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 cursor-default' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30'}`}
                     >
-                      {monitorados.includes(stockToScan.ticker) ? 'Remover da Minha Custódia' : 'Adicionar à Minha Carteira'}
+                      {assets.some(a => a.ticker === stockToScan.ticker) ? 'Já está na sua Carteira' : 'Adicionar à Minha Carteira'}
                     </button>
                   </div>
                 </div>

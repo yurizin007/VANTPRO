@@ -127,7 +127,6 @@ export default function App() {
       if (cryptos.length > 0) {
         const mapIds: Record<string, string> = { 'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'LINK': 'chainlink' };
         const ids = cryptos.map(c => mapIds[c.ticker] || c.ticker.toLowerCase()).join(',');
-        // Adicionado include_market_cap=true conforme solicitado
         const cRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=brl&include_24hr_change=true&include_market_cap=true`);
         cryptoResults = await cRes.json();
       }
@@ -181,7 +180,7 @@ export default function App() {
       case 'dashboard': return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} usdRate={usdRate} eurRate={eurRate} />;
       case 'myplan': return <MyPlanPage profile={userProfile} setUserProfile={setUserProfile} setExpenses={setExpenses} onAporteClick={() => setIsSimulationOpen(true)} setActivePage={setActivePage} />;
       case 'wallet': return <WalletPage assets={assets} onRemove={(idx) => setAssets(prev => prev.filter((_, i) => i !== idx))} onAddClick={() => setIsAddAssetOpen(true)} onRefresh={refreshPrices} isRefreshing={isRefreshingPrices} />;
-      case 'stocks': return <StocksPage onAnalyze={setSelectedAnalysisAsset} />;
+      case 'stocks': return <StocksPage onAnalyze={setSelectedAnalysisAsset} assets={assets} onAddAsset={(a) => { setAssets(prev => [...prev, a]); addNotification(a.ticker + ' adicionado à carteira!', 'success'); }} />;
       case 'crypto': return <CryptoPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'funds': return <FundsPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'tesouro': return <TesouroPage />;
