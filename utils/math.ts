@@ -16,6 +16,10 @@ export class FinancialEngine {
    * Executa o Scan Completo de um Ativo (Equities ou FIIs)
    */
   static analyze(asset: Asset): Partial<Asset> {
+    if (asset.type === 'Renda Fixa' || asset.type === 'Tesouro') {
+       return asset; // Renda fixa segue lógica simplificada de juros compostos
+    }
+
     // 1. Valuation
     const valuation = this.calculateValuation(asset);
     
@@ -31,6 +35,38 @@ export class FinancialEngine {
       risk_metrics,
       tags
     };
+  }
+
+  /**
+   * Calcula projeção de Renda Fixa (Juros Compostos)
+   */
+  static projectFixedIncome(asset: Asset, years: number, currentSelic: number): number {
+    const p = asset.averagePrice * asset.quantity;
+    const taxa = asset.taxa || 0;
+    let annualRate = 0;
+
+    if (asset.indexador === 'PRE') {
+      annualRate = taxa / 100;
+    } else if (asset.indexador === 'CDI') {
+      annualRate = (taxa / 100) * (currentSelic / 100);
+    } else if (asset.indexador === 'IPCA') {
+      annualRate = (taxa / 100) + MACRO_2026.INFLATION_EXPECTED;
+    }
+
+    return p * Math.pow(1 + annualRate, years);
+  }
+
+  /**
+   * Busca Selic atual via API do Banco Central
+   */
+  static async fetchCurrentSelic(): Promise<number> {
+    try {
+      const response = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.4189/dados/ultimos/1?formato=json');
+      const data = await response.json();
+      return parseFloat(data[0].valor) || 11.25;
+    } catch (e) {
+      return 11.25; // Fallback
+    }
   }
 
   private static calculateValuation(asset: Asset) {

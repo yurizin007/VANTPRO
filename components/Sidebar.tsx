@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   LayoutDashboard, Bot, Cpu, Building2, HeartPulse, Newspaper, 
@@ -15,24 +14,24 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, profile }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'myplan', label: 'Plano Diretor', icon: Map },
-    { id: 'academy', label: 'Formação', icon: GraduationCap },
-    { id: 'health', label: 'Saúde Fiscal', icon: HeartPulse },
-    { id: 'divider1', label: 'Ativos & Mercado', isDivider: true },
-    { id: 'wallet', label: 'Custódia', icon: Wallet },
-    { id: 'stocks', label: 'Equities BR', icon: TrendingUp },
-    { id: 'funds', label: 'Real Estate / FII', icon: Building2 },
-    { id: 'tesouro', label: 'Renda Fixa', icon: Landmark },
-    { id: 'crypto', label: 'Criptoativos', icon: Coins },
-    { id: 'offshore', label: 'Internacional', icon: Globe },
-    { id: 'previdencia', label: 'Futuro', icon: Umbrella },
-    { id: 'coe', label: 'Estruturados', icon: Tag },
-    { id: 'divider2', label: 'IA Quantitativa', isDivider: true },
-    { id: 'advisor', label: 'Assistente AI', icon: Bot },
-    { id: 'robo', label: 'Robô HRP', icon: Cpu },
-    { id: 'news', label: 'Terminal News', icon: Newspaper },
-    { id: 'tax', label: 'Tributação', icon: Calculator },
+    { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
+    { id: 'myplan', label: 'Meu Plano', icon: Map },
+    { id: 'academy', label: 'Aprenda', icon: GraduationCap },
+    { id: 'health', label: 'Saúde Financeira', icon: HeartPulse },
+    { id: 'divider1', label: 'Onde Investir', isDivider: true },
+    { id: 'wallet', label: 'Meus Investimentos', icon: Wallet },
+    { id: 'stocks', label: 'Ações Brasileiras', icon: TrendingUp },
+    { id: 'funds', label: 'Fundos Imobiliários', icon: Building2 },
+    { id: 'tesouro', label: 'Investimentos Seguros', icon: Landmark },
+    { id: 'crypto', label: 'Bitcoin e Criptos', icon: Coins },
+    { id: 'offshore', label: 'Dólar e Exterior', icon: Globe },
+    { id: 'previdencia', label: 'Aposentadoria', icon: Umbrella },
+    { id: 'coe', label: 'Oportunidades', icon: Tag },
+    { id: 'divider2', label: 'IA e Avançado', isDivider: true },
+    { id: 'advisor', label: 'Assistente Inteligente', icon: Bot },
+    { id: 'robo', label: 'Plano de Investimentos', icon: Cpu },
+    { id: 'news', label: 'Notícias do Mercado', icon: Newspaper },
+    { id: 'tax', label: 'Impostos Simplificados', icon: Calculator },
   ];
 
   return (

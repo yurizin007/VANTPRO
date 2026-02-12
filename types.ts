@@ -1,5 +1,5 @@
 
-export type AssetType = 'Ação' | 'FII' | 'Cripto' | 'Tesouro' | 'Offshore' | 'Previdência';
+export type AssetType = 'Ação' | 'FII' | 'Cripto' | 'Tesouro' | 'Offshore' | 'Previdência' | 'Renda Fixa';
 
 export interface Asset {
   ticker: string;
@@ -22,6 +22,19 @@ export interface Asset {
   dividaEbitda?: number;
   marketCap?: number;
   updatedAt?: string;
+  
+  // Proventos e Dividendos
+  lastDividend?: number;
+  dividendsHistory?: { date: string, rate: number, type: string }[];
+  nextEstimatedDate?: string;
+
+  // Novos campos para Renda Fixa
+  maturityDate?: string;
+  indexador?: 'CDI' | 'IPCA' | 'PRE';
+  taxa?: number; // Ex: 11.5 ou 110 (para 110% CDI)
+  emissor?: string;
+  fgcCoberto?: boolean;
+
   valuation?: {
     grahamPrice: number | null;
     bazinCeiling: number;
@@ -51,6 +64,19 @@ export interface Asset {
   whaleActivity?: string;
 }
 
+export interface Trade {
+  id: string;
+  ticker: string;
+  type: 'Compra' | 'Venda';
+  assetType: 'Ação' | 'FII' | 'Cripto';
+  strategy: 'Swing Trade' | 'Day Trade';
+  quantity: number;
+  price: number;
+  date: string;
+  profit?: number; // Calculado no momento da venda
+  taxDue?: number; // Calculado no momento da venda
+}
+
 export interface UserProfile {
   nome: string;
   nivelConhecimento: 'Iniciante' | 'Intermediario' | 'Avancado';
@@ -66,7 +92,6 @@ export interface UserProfile {
   xp: number;
 }
 
-// Added QuizResult interface to fix the import error in QuizPage.tsx
 export interface QuizResult {
   profile: UserProfile;
 }

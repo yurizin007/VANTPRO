@@ -1,10 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vantez Terminal Pro | Financial Intelligence</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#08080a">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5968/5968260.png">
     <script>
         // Polyfill essencial para SDKs que dependem do objeto process do Node.js
         window.process = {
@@ -13,6 +15,15 @@
                 API_KEY: "" 
             }
         };
+
+        // Registro do Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Kernel Vantez SW Ativo:', reg.scope))
+                    .catch(err => console.warn('Erro ao registrar SW:', err));
+            });
+        }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">

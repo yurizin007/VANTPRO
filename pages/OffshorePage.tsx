@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Globe, Coins, Plane, FileText, Download, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
 import { Card, MetricCard, Disclaimer } from '../components/SharedUI';
@@ -6,10 +7,13 @@ import { useNotification } from '../App';
 import { reportService } from '../services/reportService';
 import { geminiService } from '../services/geminiService';
 
-export const OffshorePage: React.FC = () => {
+interface OffshorePageProps {
+  usdRate: number;
+}
+
+export const OffshorePage: React.FC<OffshorePageProps> = ({ usdRate }) => {
   const { addNotification } = useNotification();
   const [brlAmount, setBrlAmount] = useState(10000);
-  const [usdRate] = useState(5.15);
   const [iof, setIof] = useState(1.1); 
   const [profitUsd, setProfitUsd] = useState(5000);
   const [loading, setLoading] = useState(false);
@@ -55,7 +59,7 @@ export const OffshorePage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <MetricCard title="DÓLAR PTAX" value={`R$ ${usdRate.toFixed(2)}`} change="+0.2%" isPositive={true} />
+        <MetricCard title="DÓLAR PTAX (API)" value={`R$ ${usdRate.toFixed(3)}`} change="AwesomeAPI" isPositive={true} />
         <MetricCard title="CARTEIRA GLOBAL" value="$ 12,450" change="+1.5%" isPositive={true} />
         <MetricCard title="IOF CONTA INV." value={`${iof}%`} change="Efetivo" isPositive={false} />
         <MetricCard title="LEI 14.754" value="15%" change="Flat Rate" isPositive={false} />
@@ -97,7 +101,7 @@ export const OffshorePage: React.FC = () => {
                 </div>
                 <div className="w-[1px] bg-white/5 hidden md:block"></div>
                 <div className="flex-1 text-right">
-                   <p className="text-[10px] text-gray-500 uppercase font-black tracking-[3px] mb-3">Valor Líquido (USD)</p>
+                   <p className="text-[10px] text-gray-600 font-black uppercase tracking-[3px] mb-3">Valor Líquido (USD)</p>
                    <p className="text-4xl font-black text-blue-400 tracking-tighter">$ {convertedUsd}</p>
                 </div>
              </div>

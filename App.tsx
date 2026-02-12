@@ -17,6 +17,7 @@ import { CoePage } from './pages/CoePage';
 import { PrevidenciaPage } from './pages/PrevidenciaPage';
 import { HealthPage } from './pages/HealthPage';
 import { AcademyPage } from './pages/AcademyPage';
+import { TaxPage } from './pages/TaxPage';
 import { AddAssetModal } from './modals/AddAssetModal';
 import { SimulationModal } from './modals/SimulationModal';
 import { AssetAnalysisModal } from './modals/AssetAnalysisModal';
@@ -40,23 +41,11 @@ export const useNotification = () => {
   return context;
 };
 
-// --- Componentes Auxiliares ---
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in fade-in duration-700">
-    <div className="bg-[#0e0e11] p-16 rounded-[4rem] border border-white/5 max-w-xl shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
-      <Terminal size={64} className="text-emerald-500/30 mx-auto mb-8" />
-      <h2 className="text-4xl font-black text-white uppercase tracking-tighter">{title}</h2>
-      <p className="text-gray-500 text-sm font-medium mt-6 leading-relaxed">
-        O Kernel Vantez está processando dados estruturais para esta seção. A disponibilidade no seu terminal ocorrerá em breve.
-      </p>
-    </div>
-  </div>
-);
-
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>('dashboard');
-  
+  const [usdRate, setUsdRate] = useState(5.15);
+  const [eurRate, setEurRate] = useState(5.60);
+
   // Persistência de Perfil
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('vantez_user_profile');
@@ -112,26 +101,76 @@ export default function App() {
   }, []);
 
   const refreshPrices = async () => {
-    if (assets.length === 0) return;
     setIsRefreshingPrices(true);
-    addNotification("Sincronizando Kernel com B3 via AI...", "info");
+    addNotification("Sincronizando Kernel (B3, Crypto, FX)...", "info");
+
     try {
+      // 1. AwesomeAPI (Dólar e Euro)
+      const fxRes = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL');
+      const fxData = await fxRes.json();
+      if (fxData.USDBRL) setUsdRate(parseFloat(fxData.USDBRL.bid));
+      if (fxData.EURBRL) setEurRate(parseFloat(fxData.EURBRL.bid));
+
+      // 2. B3 Assets (Brapi)
       const b3Assets = assets.filter(a => a.type === 'Ação' || a.type === 'FII');
+      let b3Results: any[] = [];
       if (b3Assets.length > 0) {
         const tickers = b3Assets.map(a => a.ticker).join(',');
-        const response = await fetch(`https://brapi.dev/api/quote/${tickers}?token=demo`);
+        const response = await fetch(`https://brapi.dev/api/quote/${tickers}?token=demo&dividends=true`);
         const data = await response.json();
-        if (data.results) {
-          const updatedAssets = assets.map(item => {
-            const liveData = data.results.find((d: any) => d.symbol === item.ticker);
-            return liveData ? { ...item, currentPrice: liveData.regularMarketPrice, updatedAt: new Date().toLocaleTimeString() } : item;
-          });
-          setAssets(updatedAssets);
-          addNotification("Preços atualizados com sucesso.", "success");
-        }
+        b3Results = data.results || [];
       }
+
+      // 3. Crypto Assets (CoinGecko Simple API)
+      const cryptos = assets.filter(a => a.type === 'Cripto');
+      let cryptoResults: any = {};
+      if (cryptos.length > 0) {
+        const mapIds: Record<string, string> = { 'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'LINK': 'chainlink' };
+        const ids = cryptos.map(c => mapIds[c.ticker] || c.ticker.toLowerCase()).join(',');
+        // Adicionado include_market_cap=true conforme solicitado
+        const cRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=brl&include_24hr_change=true&include_market_cap=true`);
+        cryptoResults = await cRes.json();
+      }
+
+      // Merging data
+      const updated = assets.map(asset => {
+        if (asset.type === 'Ação' || asset.type === 'FII') {
+          const live = b3Results.find((r: any) => r.symbol === asset.ticker);
+          if (live) {
+            const divHistory = live.dividendsData?.cashDividends?.map((dv: any) => ({
+              date: dv.paymentDate || dv.approvalDate,
+              rate: dv.rate,
+              type: dv.label || 'Provento'
+            })) || [];
+            return { 
+              ...asset, 
+              currentPrice: live.regularMarketPrice, 
+              lastDividend: divHistory[0]?.rate || 0,
+              dividendsHistory: divHistory,
+              updatedAt: new Date().toLocaleTimeString() 
+            };
+          }
+        }
+        if (asset.type === 'Cripto') {
+          const mapIds: Record<string, string> = { 'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'LINK': 'chainlink' };
+          const id = mapIds[asset.ticker] || asset.ticker.toLowerCase();
+          if (cryptoResults[id]) {
+            return {
+              ...asset,
+              currentPrice: cryptoResults[id].brl,
+              change: cryptoResults[id].brl_24h_change,
+              marketCap: cryptoResults[id].brl_market_cap,
+              updatedAt: new Date().toLocaleTimeString()
+            };
+          }
+        }
+        return asset;
+      });
+
+      setAssets(updated);
+      addNotification("Terminal Sincronizado com Sucesso.", "success");
     } catch (e) {
-      addNotification("Erro na sincronização B3.", "error");
+      addNotification("Falha na sincronização do mercado.", "error");
     } finally {
       setIsRefreshingPrices(false);
     }
@@ -139,14 +178,14 @@ export default function App() {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} />;
+      case 'dashboard': return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} usdRate={usdRate} eurRate={eurRate} />;
       case 'myplan': return <MyPlanPage profile={userProfile} setUserProfile={setUserProfile} setExpenses={setExpenses} onAporteClick={() => setIsSimulationOpen(true)} setActivePage={setActivePage} />;
       case 'wallet': return <WalletPage assets={assets} onRemove={(idx) => setAssets(prev => prev.filter((_, i) => i !== idx))} onAddClick={() => setIsAddAssetOpen(true)} onRefresh={refreshPrices} isRefreshing={isRefreshingPrices} />;
       case 'stocks': return <StocksPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'crypto': return <CryptoPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'funds': return <FundsPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'tesouro': return <TesouroPage />;
-      case 'offshore': return <OffshorePage />;
+      case 'offshore': return <OffshorePage usdRate={usdRate} />;
       case 'previdencia': return <PrevidenciaPage />;
       case 'coe': return <CoePage />;
       case 'advisor': return <AdvisorPage assets={assets} />;
@@ -154,8 +193,8 @@ export default function App() {
       case 'news': return <NewsPage />;
       case 'academy': return <AcademyPage />;
       case 'health': return <HealthPage expenses={expenses} setExpenses={setExpenses} income={income} setIncome={setIncome} debts={debtList} setDebts={setDebtList} savingsAccount={savings} setSavingsAccount={setSavings} />;
-      case 'tax': return <PlaceholderPage title="Gestão de Impostos" />;
-      default: return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} />;
+      case 'tax': return <TaxPage />;
+      default: return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} usdRate={usdRate} eurRate={eurRate} />;
     }
   };
 
@@ -173,7 +212,6 @@ export default function App() {
           </div>
         </main>
 
-        {/* Sistema de Notificações */}
         <div className="fixed top-10 right-10 z-[300] space-y-3 pointer-events-none">
           {notifications.map(n => (
             <div key={n.id} className={`pointer-events-auto flex items-center gap-4 px-8 py-5 rounded-3xl border shadow-2xl animate-in slide-in-from-right-10 duration-500 ${
@@ -188,7 +226,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* Modais */}
         {isSimulationOpen && <SimulationModal isOpen={isSimulationOpen} onClose={() => setIsSimulationOpen(false)} profile={userProfile} />}
         {isAddAssetOpen && <AddAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} onAdd={(a) => setAssets(prev => [...prev, a])} />}
         {selectedAnalysisAsset && <AssetAnalysisModal asset={selectedAnalysisAsset} isOpen={!!selectedAnalysisAsset} onClose={() => setSelectedAnalysisAsset(null)} />}

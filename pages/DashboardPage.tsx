@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip
 } from 'recharts';
 import { 
   Zap, Activity, TrendingUp, Target, 
-  ShieldCheck, BrainCircuit, Rocket, HeartPulse, Fingerprint, ArrowRight, ArrowUpRight, ShieldAlert, Cpu
+  ShieldCheck, BrainCircuit, Rocket, HeartPulse, Fingerprint, ArrowRight, ArrowUpRight, ShieldAlert, Cpu, Globe
 } from 'lucide-react';
 import { Card, MetricCard, Disclaimer, Badge } from '../components/SharedUI';
 import { ChartDefinitivo } from '../components/ChartDefinitivo';
@@ -16,9 +17,11 @@ interface DashboardPageProps {
   userProfile?: UserProfile;
   setActivePage: (id: PageId) => void;
   onAporteClick: () => void;
+  usdRate?: number;
+  eurRate?: number;
 }
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ userProfile, setActivePage, onAporteClick }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ userProfile, setActivePage, onAporteClick, usdRate, eurRate }) => {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -135,6 +138,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ userProfile, setAc
         </Card>
       </div>
 
+      {/* COTAÇÕES EM TEMPO REAL (AWESOME API) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard 
+          title="Dólar Comercial" 
+          value={usdRate ? `R$ ${usdRate.toFixed(3)}` : "Carregando..."} 
+          dataSource="AwesomeAPI" 
+          change="Real-time" 
+          isPositive={true}
+        />
+        <MetricCard 
+          title="Euro Comercial" 
+          value={eurRate ? `R$ ${eurRate.toFixed(3)}` : "Carregando..."} 
+          dataSource="AwesomeAPI"
+          change="Real-time" 
+          isPositive={true}
+        />
+        <MetricCard title="Ibovespa" value="128.450" change="+0.42%" isPositive={true} />
+        <MetricCard title="Bitcoin (BRL)" value="R$ 385k" change="+2.4%" isPositive={true} dataSource="CoinGecko" />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
            <Card className="p-10 border-blue-500/10 bg-blue-500/[0.01]">
@@ -240,16 +263,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ userProfile, setAc
               >
                  Refinar <ArrowRight size={14} />
               </button>
-           </Card>
-
-           <Card className="p-8 space-y-6 text-left border-amber-500/10 bg-amber-500/[0.01]">
-              <div className="flex items-center gap-4">
-                 <Fingerprint className="text-amber-500 w-6 h-6" />
-                 <h4 className="text-[10px] font-black text-white uppercase tracking-[3px]">Meu Perfil</h4>
-              </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
-                 Seu perfil <span className="text-white">{profile.perfilRisco}</span> indica foco em {profile.perfilRisco === 'Conservador' ? 'segurança' : 'retorno'}.
-              </p>
            </Card>
         </div>
       </div>
