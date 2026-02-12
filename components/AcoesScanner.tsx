@@ -9,7 +9,12 @@ const SETORES_CONHECIDOS: Record<string, string> = {
   MXRF11: 'FII Papel', HGLG11: 'FII Tijolo', KNRI11: 'FII Misto'
 };
 
-const AcoesScanner: React.FC = () => {
+interface AcoesScannerProps {
+  assets?: import('../types').Asset[];
+  onAddAsset?: (asset: import('../types').Asset) => void;
+}
+
+const AcoesScanner: React.FC<AcoesScannerProps> = ({ assets = [], onAddAsset }) => {
   const [acoes, setAcoes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagina, setPagina] = useState(1);
@@ -180,7 +185,7 @@ const AcoesScanner: React.FC = () => {
       {loading ? <div className="loading-container"><div className="spinner"></div></div> : (
         <div className="acoes-grid">
           {acoes.map((acao) => (
-            <div key={acao.ticker} className={`acao-card-kinvo group ${monitorados.includes(acao.ticker) ? 'border-blue-500' : ''}`}>
+            <div key={acao.ticker} className={`acao-card-kinvo group ${assets.some(a => a.ticker === acao.ticker) ? 'border-emerald-500' : ''}`}>
               <div className="card-header">
                 <div className="flex items-center gap-3">
                   {acao.logo ? <img src={acao.logo} alt={acao.ticker} className="w-10 h-10 rounded bg-white p-1 object-contain" /> : <div className="w-10 h-10 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-500">{acao.ticker.substring(0, 2)}</div>}
@@ -201,8 +206,24 @@ const AcoesScanner: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => openScanner(acao)} className="btn-scan">🔍 DETALHES</button>
-                  <button onClick={() => toggleMonitorar(acao.ticker)} className={`btn-monitorar ${monitorados.includes(acao.ticker) ? 'ativo' : ''}`}>
-                    {monitorados.includes(acao.ticker) ? '✓' : '+'}
+                  <button onClick={() => {
+                    if (assets.some(a => a.ticker === acao.ticker)) return;
+                    if (onAddAsset) {
+                      onAddAsset({
+                        ticker: acao.ticker,
+                        nome: acao.nome,
+                        name: acao.nome,
+                        type: acao.ticker.endsWith('11') ? 'FII' : 'Ação',
+                        quantity: 1,
+                        averagePrice: acao.preco,
+                        currentPrice: acao.preco,
+                        setor: acao.setor,
+                        change: acao.variacao,
+                        updatedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                      });
+                    }
+                  }} className={`btn-monitorar ${assets.some(a => a.ticker === acao.ticker) ? 'ativo' : ''}`}>
+                    {assets.some(a => a.ticker === acao.ticker) ? '✓' : '+'}
                   </button>
                 </div>
               </div>
@@ -316,12 +337,34 @@ const AcoesScanner: React.FC = () => {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => { toggleMonitorar(stockToScan.ticker); setStockToScan(null); }}
-                      className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[5px] rounded-2xl text-lg transition-all shadow-2xl shadow-blue-900/30 active:scale-[0.98]"
-                    >
-                      {monitorados.includes(stockToScan.ticker) ? 'Remover da Minha Custódia' : 'Adicionar à Minha Carteira'}
-                    </button>
+                    {assets.some(a => a.ticker === stockToScan.ticker) ? (
+                      <div className="w-full py-6 bg-emerald-600/20 border-2 border-emerald-500/40 text-emerald-400 font-black uppercase tracking-[5px] rounded-2xl text-lg text-center">
+                        ✓ Já está na sua Carteira
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (onAddAsset) {
+                            onAddAsset({
+                              ticker: stockToScan.ticker,
+                              nome: stockToScan.nome,
+                              name: stockToScan.nome,
+                              type: stockToScan.ticker.endsWith('11') ? 'FII' : 'Ação',
+                              quantity: 1,
+                              averagePrice: stockToScan.preco,
+                              currentPrice: stockToScan.preco,
+                              setor: stockToScan.setor,
+                              change: stockToScan.variacao,
+                              updatedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                            });
+                          }
+                          setStockToScan(null);
+                        }}
+                        className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[5px] rounded-2xl text-lg transition-all shadow-2xl shadow-blue-900/30 active:scale-[0.98]"
+                      >
+                        Adicionar à Minha Carteira
+                      </button>
+                    )}
                   </div>
                 </div>
               </>

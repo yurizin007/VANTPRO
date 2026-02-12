@@ -134,7 +134,7 @@ export default function App() {
       case 'dashboard': return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} />;
       case 'myplan': return <MyPlanPage profile={userProfile} setUserProfile={setUserProfile} setExpenses={setExpenses} onAporteClick={() => setIsSimulationOpen(true)} setActivePage={setActivePage} />;
       case 'wallet': return <WalletPage assets={assets} onRemove={(idx) => setAssets(prev => prev.filter((_, i) => i !== idx))} onAddClick={() => setIsAddAssetOpen(true)} onRefresh={() => refreshPrices(true)} isRefreshing={isRefreshingPrices} />;
-      case 'stocks': return <StocksPage onAnalyze={setSelectedAnalysisAsset} />;
+      case 'stocks': return <StocksPage onAnalyze={setSelectedAnalysisAsset} assets={assets} onAddAsset={(a) => { setAssets(prev => [...prev, a]); addNotification(`${a.ticker} adicionado à carteira!`, 'success'); }} />;
       case 'crypto': return <CryptoPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'funds': return <FundsPage onAnalyze={setSelectedAnalysisAsset} />;
       case 'tesouro': return <TesouroPage />;
