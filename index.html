@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vantez Terminal Pro | Elite Financial Intelligence</title>
     <script>
-        // Polyfill para compatibilidade com a SDK do Gemini em ambientes Vite
+        // Polyfill essencial para compatibilidade com a SDK do Gemini em ambientes de navegador modernos (Vite/ESM).
+        // Garante que o objeto process.env.API_KEY esteja disponível sem quebrar a execução.
         window.process = window.process || { env: {} };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,6 +24,8 @@
             background-color: var(--bg-dark);
             color: #e5e7eb;
             -webkit-font-smoothing: antialiased;
+            margin: 0;
+            padding: 0;
         }
         .font-mono {
             font-family: 'JetBrains Mono', monospace;
@@ -56,15 +59,10 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* FIX PARA ERRO DE LARGURA DO RECHARTS (WIDTH -1) */
+        /* Ajustes de responsividade para gráficos */
         .recharts-responsive-container {
             min-height: 200px !important;
             min-width: 100px !important;
-        }
-
-        /* PROTEÇÃO PARA O GRID DE AÇÕES */
-        .acoes-grid {
-            min-height: 300px;
         }
     </style>
 <script type="importmap">
@@ -82,5 +80,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- Carregamento do ponto de entrada da aplicação -->
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>

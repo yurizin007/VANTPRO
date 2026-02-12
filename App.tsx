@@ -20,7 +20,7 @@ import { AddAssetModal } from './modals/AddAssetModal';
 import { SimulationModal } from './modals/SimulationModal';
 import { AssetAnalysisModal } from './modals/AssetAnalysisModal';
 import { Asset, PageId, Expense, Debt, UserProfile } from './types';
-import { Info, Lock } from 'lucide-react';
+import { Info, LayoutDashboard } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -38,11 +38,20 @@ export const useNotification = () => {
   return context;
 };
 
+// Componente simples para seções futuras
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in fade-in duration-700">
+    <div className="bg-white/5 p-12 rounded-[3rem] border border-white/10 max-w-xl">
+      <LayoutDashboard size={48} className="text-emerald-500 opacity-50 mx-auto mb-6" />
+      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">{title}</h2>
+      <p className="text-gray-500 text-sm font-medium mt-4">Esta inteligência está sendo processada pelo Kernel Vantez e estará disponível em seu terminal em breve.</p>
+    </div>
+  </div>
+);
+
 export default function App() {
-  // Inicia direto no dashboard
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   
-  // Perfil padrão para garantir que o app funcione sem o quiz
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('vantez_user_profile');
     if (saved) return JSON.parse(saved);
@@ -58,7 +67,7 @@ export default function App() {
       horizonteAnos: 15,
       faseAtual: 3, 
       scoreRisco: 85,
-      unlockedPages: [], // Ignorado agora pelo Sidebar desbloqueado
+      unlockedPages: [],
       xp: 500
     };
   });
@@ -133,9 +142,11 @@ export default function App() {
       case 'previdencia': return <PrevidenciaPage />;
       case 'coe': return <CoePage />;
       case 'advisor': return <AdvisorPage assets={assets} />;
+      case 'robo': return <RoboPage />;
       case 'news': return <NewsPage />;
       case 'academy': return <AcademyPage />;
       case 'health': return <HealthPage expenses={expenses} setExpenses={setExpenses} income={income} setIncome={setIncome} debts={debtList} setDebts={setDebtList} savingsAccount={savings} setSavingsAccount={setSavings} />;
+      case 'tax': return <PlaceholderPage title="Impostos Simplificados" />;
       default: return <DashboardPage userProfile={userProfile} setActivePage={setActivePage} onAporteClick={() => setIsSimulationOpen(true)} />;
     }
   };
